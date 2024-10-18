@@ -1,66 +1,51 @@
-import altair as alt
 import pandas as pd
 import streamlit as st
 
-# Show the page title and description.
-st.set_page_config(page_title="Titanic dataset", page_icon="🎬")
-st.title("🎬 Titanic dataset")
+# Установка иконки и заголовка страницы
+st.set_page_config(page_title="Данные пассажиров Титаника", page_icon="🚢")
+
+# Добавление заголовка и описания
+st.title("🚢 Данные пассажиров Титаника")
 st.write(
     """
-    This app visualizes data from [The Titanic Database (TMDB)](https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata).
-    It shows which movie genre performed best at the box office over the years. Just 
-    click on the widgets below to explore!
+    Для просмотра данных только по спасенным или погибшим, выберите соответствующий пункт из списка:
     """
 )
 
-
-# Load the data from a CSV. We're caching this so it doesn't reload every time the app
-# reruns (e.g. if the user interacts with the widgets).
+# Загрузка данных
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/titanic_train.csv")
+    df = pd.read_csv("/mnt/data/titanic_train [tsKg9Q].csv")  # Подставляем правильный путь к загруженному файлу
     return df
-
 
 df = load_data()
 
-# Show a multiselect widget with the genres using `st.multiselect`.
-genres = st.multiselect(
-    "Genres",
-    df.genre.unique(),
-    ["Action", "Adventure", "Biography", "Comedy", "Drama", "Horror"],
+# Визуализация картинки (путь к изображению)
+st.image("/mnt/data/image.png", caption="Титаник", use_column_width=True)
+
+# Создание выпадающего списка для фильтрации по статусу выживания
+survived_option = st.selectbox(
+    "Значение поля Survived:",
+    options=["Любое", "Спасены", "Погибшие"],
 )
 
-# Show a slider widget with the years using `st.slider`.
-years = st.slider("Years", 1986, 2006, (2000, 2016))
+# Преобразование выбора в соответствующие числовые значения
+if survived_option == "Спасены":
+    df_filtered = df[df['Survived'] == 1]
+elif survived_option == "Погибшие":
+    df_filtered = df[df['Survived'] == 0]
+else:
+    df_filtered = df
 
-# Filter the dataframe based on the widget input and reshape it.
-df_filtered = df[(df["genre"].isin(genres)) & (df["year"].between(years[0], years[1]))]
-df_reshaped = df_filtered.pivot_table(
-    index="year", columns="genre", values="gross", aggfunc="sum", fill_value=0
-)
-df_reshaped = df_reshaped.sort_values(by="year", ascending=False)
+# Подсчет среднего возраста по классу обслуживания
+average_age_by_class = df_filtered.groupby('Pclass')['Age'].mean().reset_index()
+average_age_by_class.columns = ['Класс обслуживания', 'Средний возраст']
 
+# Отображение таблицы с результатами
+st.write("Результаты по выбранному фильтру:")
+st.dataframe(average_age_by_class, use_container_width=True)
 
-# Display the data as a table using `st.dataframe`.
-st.dataframe(
-    df_reshaped,
-    use_container_width=True,
-    column_config={"year": st.column_config.TextColumn("Year")},
-)
-
-# Display the data as an Altair chart using `st.altair_chart`.
-df_chart = pd.melt(
-    df_reshaped.reset_index(), id_vars="year", var_name="genre", value_name="gross"
-)
-chart = (
-    alt.Chart(df_chart)
-    .mark_line()
-    .encode(
-        x=alt.X("year:N", title="Year"),
-        y=alt.Y("gross:Q", title="Gross earnings ($)"),
-        color="genre:N",
-    )
-    .properties(height=320)
-)
-st.altair_chart(chart, use_container_width=True)
+# Вывод общей информации
+st.write(f"Всего пассажиров: {len(df_filtered)}")
+st.write(f"Спасено: {len(df[df['Survived'] == 1])}")
+st.write(f"Погибло: {len(df[df['Survived'] == 0])}")
