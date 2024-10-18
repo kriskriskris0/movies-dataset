@@ -16,7 +16,7 @@ st.write(
 # Загрузка данных
 @st.cache_data
 def load_data():
-    df = pd.read_csv("/mnt/data/titanic_train.csv")  # Загружаем твой файл с данными
+    df = pd.read_csv("data/titanic_train.csv")  # Загружаем твой файл с данными
     return df
 
 df = load_data()
